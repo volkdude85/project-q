@@ -2759,6 +2759,10 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/c++/16.1.1/bits/exception_defines.h \
   /usr/include/c++/16.1.1/bits/exception_ptr.h \
   /usr/include/c++/16.1.1/bits/formatfwd.h \
+  /usr/include/c++/16.1.1/bits/fs_dir.h \
+  /usr/include/c++/16.1.1/bits/fs_fwd.h \
+  /usr/include/c++/16.1.1/bits/fs_ops.h \
+  /usr/include/c++/16.1.1/bits/fs_path.h \
   /usr/include/c++/16.1.1/bits/functexcept.h \
   /usr/include/c++/16.1.1/bits/functional_hash.h \
   /usr/include/c++/16.1.1/bits/hash_bytes.h \
@@ -2796,6 +2800,7 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/c++/16.1.1/bits/postypes.h \
   /usr/include/c++/16.1.1/bits/predefined_ops.h \
   /usr/include/c++/16.1.1/bits/ptr_traits.h \
+  /usr/include/c++/16.1.1/bits/quoted_string.h \
   /usr/include/c++/16.1.1/bits/range_access.h \
   /usr/include/c++/16.1.1/bits/ranges_algo.h \
   /usr/include/c++/16.1.1/bits/ranges_algobase.h \
@@ -2861,6 +2866,7 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/c++/16.1.1/climits \
   /usr/include/c++/16.1.1/clocale \
   /usr/include/c++/16.1.1/cmath \
+  /usr/include/c++/16.1.1/codecvt \
   /usr/include/c++/16.1.1/compare \
   /usr/include/c++/16.1.1/concepts \
   /usr/include/c++/16.1.1/cstddef \
@@ -2881,9 +2887,11 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/c++/16.1.1/ext/numeric_traits.h \
   /usr/include/c++/16.1.1/ext/string_conversions.h \
   /usr/include/c++/16.1.1/ext/type_traits.h \
+  /usr/include/c++/16.1.1/filesystem \
   /usr/include/c++/16.1.1/format \
   /usr/include/c++/16.1.1/functional \
   /usr/include/c++/16.1.1/initializer_list \
+  /usr/include/c++/16.1.1/iomanip \
   /usr/include/c++/16.1.1/ios \
   /usr/include/c++/16.1.1/iosfwd \
   /usr/include/c++/16.1.1/istream \
@@ -2971,6 +2979,8 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/qt6/QtCore/QCoreApplication \
   /usr/include/qt6/QtCore/QDateTime \
   /usr/include/qt6/QtCore/QDebug \
+  /usr/include/qt6/QtCore/QDir \
+  /usr/include/qt6/QtCore/QFile \
   /usr/include/qt6/QtCore/QHash \
   /usr/include/qt6/QtCore/QJsonArray \
   /usr/include/qt6/QtCore/QJsonDocument \
@@ -3029,9 +3039,14 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/qt6/QtCore/qdatetime.h \
   /usr/include/qt6/QtCore/qdeadlinetimer.h \
   /usr/include/qt6/QtCore/qdebug.h \
+  /usr/include/qt6/QtCore/qdir.h \
+  /usr/include/qt6/QtCore/qdirlisting.h \
   /usr/include/qt6/QtCore/qendian.h \
   /usr/include/qt6/QtCore/qeventloop.h \
   /usr/include/qt6/QtCore/qexceptionhandling.h \
+  /usr/include/qt6/QtCore/qfile.h \
+  /usr/include/qt6/QtCore/qfiledevice.h \
+  /usr/include/qt6/QtCore/qfileinfo.h \
   /usr/include/qt6/QtCore/qflags.h \
   /usr/include/qt6/QtCore/qfloat16.h \
   /usr/include/qt6/QtCore/qforeach.h \
@@ -3109,6 +3124,7 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/qt6/QtCore/qtextstream.h \
   /usr/include/qt6/QtCore/qtformat_impl.h \
   /usr/include/qt6/QtCore/qtimer.h \
+  /usr/include/qt6/QtCore/qtimezone.h \
   /usr/include/qt6/QtCore/qtmetamacros.h \
   /usr/include/qt6/QtCore/qtnoop.h \
   /usr/include/qt6/QtCore/qtpreprocessorsupport.h \
@@ -4449,8 +4465,6 @@ CMakeFiles/project-qd.dir/coordinator.cpp.o:
 
 /home/volkdude/Projects/project-q/src/daemon/worker.cpp:
 
-/usr/include/qt6/QtCore/QFile:
-
 /home/volkdude/Projects/project-q/src/daemon/taskrunner.cpp:
 
 /usr/include/qt6/QtSql/qsqlquery.h:
@@ -4458,6 +4472,8 @@ CMakeFiles/project-qd.dir/coordinator.cpp.o:
 /usr/include/qt6/QtSql/qsqlerror.h:
 
 /usr/include/qt6/QtSql/QSqlError:
+
+/usr/include/qt6/QtCore/QFile:
 
 /home/volkdude/Projects/project-q/src/daemon/protocol.cpp:
 
