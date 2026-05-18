@@ -19,6 +19,7 @@ public:
     int addTask(const QString &name, const QString &command, int timeoutSec = 1800);
     bool markTask(int taskId, const QString &status);
     QJsonArray listTasks(const QString &statusFilter = QString());
+    int purgeOldTasks(int retentionDays = 30);
 
 private:
     bool createSchema();

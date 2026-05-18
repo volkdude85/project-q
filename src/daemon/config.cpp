@@ -36,6 +36,9 @@ DaemonConfig DaemonConfig::fromCommandLine(QCoreApplication &app) {
     // Task limits
     parser.addOption(QCommandLineOption("max-tasks", "Max concurrent tasks", "n", "4"));
     parser.addOption(QCommandLineOption("task-timeout", "Default task timeout (sec)", "sec", "1800"));
+    // GC
+    parser.addOption(QCommandLineOption("gc", "Run old task garbage collection and exit"));
+    parser.addOption(QCommandLineOption("retention-days", "Retention days for GC", "days", "30"));
 
     parser.addHelpOption();
     parser.addVersionOption();
@@ -50,9 +53,12 @@ DaemonConfig DaemonConfig::fromCommandLine(QCoreApplication &app) {
     if (cfg.isCoordinator && isWorker) {
         qFatal("Cannot run as both coordinator and worker");
     }
-    if (!cfg.isCoordinator && !isWorker) {
+    if (!cfg.isCoordinator && !isWorker && !parser.isSet("gc")) {
         qFatal("Must specify --coordinator or --worker");
     }
+
+    cfg.runGc = parser.isSet("gc");
+    cfg.retentionDays = parser.value("retention-days").toInt();
 
     // Network
     cfg.bindAddress = QHostAddress(parser.value("bind"));

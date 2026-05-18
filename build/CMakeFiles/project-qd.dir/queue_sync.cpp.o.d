@@ -416,4 +416,13 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: \
  /usr/include/qt6/QtCore/QJsonDocument /usr/include/qt6/QtSql/QSqlQuery \
  /usr/include/qt6/QtSql/qsqlquery.h /usr/include/qt6/QtSql/QSqlError \
  /usr/include/qt6/QtSql/qsqlerror.h /usr/include/qt6/QtCore/QDebug \
- /usr/include/qt6/QtCore/QDateTime
+ /usr/include/qt6/QtCore/QDateTime /usr/include/qt6/QtCore/QDir \
+ /usr/include/qt6/QtCore/qdir.h /usr/include/qt6/QtCore/qdirlisting.h \
+ /usr/include/qt6/QtCore/qfiledevice.h /usr/include/c++/16.1.1/filesystem \
+ /usr/include/c++/16.1.1/bits/fs_fwd.h \
+ /usr/include/c++/16.1.1/bits/fs_path.h /usr/include/c++/16.1.1/iomanip \
+ /usr/include/c++/16.1.1/bits/quoted_string.h \
+ /usr/include/c++/16.1.1/codecvt /usr/include/c++/16.1.1/bits/fs_dir.h \
+ /usr/include/c++/16.1.1/bits/fs_ops.h /usr/include/qt6/QtCore/qfile.h \
+ /usr/include/qt6/QtCore/qfileinfo.h /usr/include/qt6/QtCore/qtimezone.h \
+ /usr/include/qt6/QtCore/QFile

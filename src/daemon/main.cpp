@@ -14,6 +14,18 @@ int main(int argc, char *argv[]) {
     DaemonConfig cfg = DaemonConfig::fromCommandLine(app);
     cfg.dump();
 
+    if (cfg.runGc) {
+        auto *coordinator = new Coordinator(cfg, &app);
+        auto *queueSync = new QueueSync(cfg, coordinator, &app);
+        if (!queueSync->open()) {
+            qCritical() << "[QD] Cannot open queue database for GC";
+            return 1;
+        }
+        int purged = queueSync->purgeOldTasks(cfg.retentionDays);
+        qDebug() << "[QD] GC complete: purged" << purged << "tasks";
+        return 0;
+    }
+
     if (cfg.isCoordinator) {
         auto *coordinator = new Coordinator(cfg, &app);
 

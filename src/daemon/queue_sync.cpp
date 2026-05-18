@@ -3,6 +3,10 @@
 #include <QSqlError>
 #include <QDebug>
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 QueueSync::QueueSync(const DaemonConfig &config, Coordinator *coordinator, QObject *parent)
     : QObject(parent), m_config(config), m_coordinator(coordinator)
@@ -147,4 +151,55 @@ QJsonArray QueueSync::listTasks(const QString &statusFilter) {
     }
 
     return tasks;
+}
+
+int QueueSync::purgeOldTasks(int retentionDays) {
+    QSqlQuery query(m_db);
+    query.prepare(
+        "SELECT id, name, command, stdout_path, stderr_path, status, "
+        "duration_sec, created_at, finished_at FROM tasks "
+        "WHERE status IN ('done','failed','timeout') "
+        "AND finished_at < datetime('now', '-' || ? || ' days')"
+    );
+    query.addBindValue(retentionDays);
+
+    if (!query.exec()) {
+        qCritical() << "[QSYNC] Failed to query old tasks:" << query.lastError().text();
+        return -1;
+    }
+
+    QString archiveDir = m_config.dataDir + "/archive/"
+        + QDateTime::currentDateTimeUtc().toString("yyyy-MM");
+
+    int purged = 0;
+    QSqlQuery del(m_db);
+    del.prepare("DELETE FROM tasks WHERE id = ?");
+
+    while (query.next()) {
+        int taskId = query.value(0).toInt();
+        QJsonObject task;
+        task["id"] = taskId;
+        task["name"] = query.value(1).toString();
+        task["command"] = query.value(2).toString();
+        task["stdout_path"] = query.value(3).toString();
+        task["stderr_path"] = query.value(4).toString();
+        task["status"] = query.value(5).toString();
+        task["duration_sec"] = query.value(6).toInt();
+        task["created_at"] = query.value(7).toString();
+        task["finished_at"] = query.value(8).toString();
+        task["archived_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+
+        QDir().mkpath(archiveDir);
+        QFile file(archiveDir + QString("/task-%1.json").arg(taskId));
+        if (file.open(QIODevice::WriteOnly)) {
+            file.write(QJsonDocument(task).toJson(QJsonDocument::Indented));
+            file.close();
+        }
+
+        del.addBindValue(taskId);
+        if (del.exec()) purged++;
+    }
+
+    qDebug() << "[QSYNC] Purged" << purged << "old tasks (>" << retentionDays << "days) to" << archiveDir;
+    return purged;
 }

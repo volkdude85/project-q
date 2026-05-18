@@ -9,6 +9,8 @@
 struct DaemonConfig {
     // Mode
     bool isCoordinator = false;
+    bool runGc = false;
+    int retentionDays = 30;
 
     // Network
     QHostAddress bindAddress = QHostAddress::Any;

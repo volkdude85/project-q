@@ -59,3 +59,4 @@
 - Farm SSH still broken on all nodes (Porsche connection reset, Laptop no key, Ally offline)
 - Dad joke names pending: "Project Queue'd", "farm-fist", "q-demon", "UDP speed demon"
 - Task 008b added to palace: private GitHub repo for cross-machine access
+2026-05-18 15:20:00 UTC | Garuda | deploy-worker.sh, project-qd | Fixed deploy script on ROG Ally USB to use local binaries instead of GitHub clone. Caught outdated IP references pointing to .145 and .78 instead of current Block IP (.75). Coordinator now running on Block (192.168.0.75:9100/tcp, 9101/udp). ROG Ally worker deploy script corrected to connect to 192.168.0.75:9100. Note: q-worker and q-master still have hardcoded 192.168.0.145 references for artifact/rsync operations.
