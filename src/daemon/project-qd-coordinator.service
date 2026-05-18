@@ -1,0 +1,12 @@
+[Unit]
+Description=Project Q Daemon Coordinator
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/project-qd --coordinator --port 9100
+Restart=always
+RestartSec=5
+User=porchebox
+
+[Install]
+WantedBy=default.target

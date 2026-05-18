@@ -1,0 +1,12 @@
+[Unit]
+Description=Project Q Daemon Worker
+After=network.target
+PartOf=project-qd.target
+
+[Service]
+ExecStart=/usr/local/bin/project-qd --worker --connect 192.168.0.145:9100 --name %H
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

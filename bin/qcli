@@ -1,0 +1,77 @@
+#!/bin/bash
+# Project Q — Task Queue Master Controller
+# Add jobs, check status, assign work.
+
+QDIR="${HOME}/.local/share/project-q"
+CACHE="${QDIR}/cache/artifacts"
+DB="${QDIR}/queue.db"
+
+init_db() {
+    mkdir -p "$QDIR" "$CACHE"
+    sqlite3 "$DB" "CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      cmd TEXT NOT NULL,
+      deps TEXT DEFAULT '',
+      outputs TEXT DEFAULT '',
+      status TEXT DEFAULT 'PENDING',
+      assigned_node TEXT,
+      started_at TEXT,
+      completed_at TEXT,
+      error_log TEXT DEFAULT ''
+    );" 2>/dev/null
+    echo "Project Q initialized at $QDIR"
+}
+
+add_task() {
+    local name="$1" cmd="$2" deps="$3" outputs="$4"
+    if [ -z "$name" ] || [ -z "$cmd" ]; then
+        echo "Usage: qcli add NAME 'COMMAND' [DEPS] [OUTPUTS]"
+        exit 1
+    fi
+    [ -z "$deps" ] && deps=""
+    [ -z "$outputs" ] && outputs=""
+    sqlite3 "$DB" "INSERT INTO tasks(name,cmd,deps,outputs,status) VALUES('$name','$cmd','$deps','$outputs','PENDING');"
+    echo "Added task '$name'"
+}
+
+list_tasks() {
+    sqlite3 "$DB" "SELECT id, name, status, assigned_node, deps, outputs FROM tasks ORDER BY id;"
+}
+
+pendings() {
+    sqlite3 "$DB" "SELECT id, name, deps, outputs FROM tasks WHERE status='PENDING';"
+}
+
+reset_task() {
+    sqlite3 "$DB" "UPDATE tasks SET status='PENDING', assigned_node='', started_at='', completed_at='', error_log='' WHERE id=$1;"
+    echo "Reset task $1 to PENDING"
+}
+
+clear_completed() {
+    sqlite3 "$DB" "DELETE FROM tasks WHERE status='DONE';"
+    echo "Cleared DONE tasks"
+}
+
+show_help() {
+    echo "Project Q — Task Queue CLI"
+    echo "  qcli init              Create queue DB"
+    echo "  qcli add NAME 'CMD' [DEPS] [OUTPUTS]"
+    echo "  qcli list              Show all tasks"
+    echo "  qcli pending           Show incomplete tasks"
+    echo "  qcli reset ID          Mark task PENDING again"
+    echo "  qcli clear             Remove DONE tasks from queue"
+    echo "  qcli help              Show this"
+}
+
+[ -f "$DB" ] || init_db
+
+case "$1" in
+    init) init_db ;;
+    add) shift; add_task "$1" "$2" "$3" "$4" ;;
+    list) list_tasks ;;
+    pending) pendings ;;
+    reset) reset_task "$2" ;;
+    clear) clear_completed ;;
+    help|*) show_help ;;
+esac

@@ -1,0 +1,51 @@
+#!/bin/bash
+# Project Q — Farm Dispatcher
+# Runs on Block. Seeds tasks, monitors workers, aggregates artifacts.
+
+QDIR="${HOME}/.local/share/project-q"
+CACHE="${QDIR}/cache/artifacts"
+DB="${QDIR}/queue.db"
+
+NODES=("192.168.0.145" "192.168.0.78" "192.168.0.56")
+
+case "$1" in
+    status)
+        sqlite3 "$DB" "SELECT status, count(*) FROM tasks GROUP BY status;"
+        ;;
+    artifacts)
+        ls -la "$CACHE/"
+        ;;
+    deploy)
+        for node in "${NODES[@]}"; do
+            echo "Deploying q-worker to $node..."
+            scp "$HOME/Projects/project-q/bin/q-worker" "volkdude@$node:~/bin/q-worker" 2>/dev/null || echo "  scp $node failed"
+            ssh "volkdude@$node" "chmod +x ~/bin/q-worker && mkdir -p ~/.local/share/project-q" 2>/dev/null || echo "  ssh $node failed"
+        done
+        ;;
+    start-workers)
+        for node in "${NODES[@]}"; do
+            echo "Starting q-worker on $node..."
+            ssh "volkdude@$node" "nohup ~/bin/q-worker >~/.local/share/project-q/worker.log 2>&1 &" 2>/dev/null || echo "  start $node failed"
+        done
+        ;;
+    stop-workers)
+        for node in "${NODES[@]}"; do
+            echo "Stopping q-worker on $node..."
+            ssh "volkdude@$node" "pkill -f q-worker" 2>/dev/null || echo "  stop $node done"
+        done
+        ;;
+    sync-db)
+        # Pull DB state from nodes (if they updated it)
+        for node in "${NODES[@]}"; do
+            scp "volkdude@$node:$DB" "/tmp/queue_${node##*.}.db" 2>/dev/null || echo "  sync $node failed"
+        done
+        ;;
+    help|*)
+        echo "Farm dispatcher commands:"
+        echo "  q-master status          Show task counts"
+        echo "  q-master artifacts       List artifact cache"
+        echo "  q-master deploy          Copy q-worker to all nodes"
+        echo "  q-master start-workers   Start worker agents"
+        echo "  q-master stop-workers    Kill worker agents"
+        ;;
+esac

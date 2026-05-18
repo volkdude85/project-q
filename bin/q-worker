@@ -1,0 +1,87 @@
+#!/bin/bash
+# Project Q — Worker Node Agent
+# Polls queue, picks up tasks whose deps are satisfied, executes, pushes artifacts.
+
+NODE="$(hostname)"
+QDIR="${HOME}/.local/share/project-q"
+CACHE="${QDIR}/cache/artifacts"
+DB="${QDIR}/queue.db"
+WORKDIR="${HOME}/.cache/q-worker"
+POLL_INTERVAL=10
+
+mkdir -p "$WORKDIR"
+
+fetch_artifacts() {
+    # If Block is known, rsync artifacts from Block (default: 192.168.0.145)
+    BLOCK_IP="${BLOCK_IP:-192.168.0.145}"
+    rsync -az "$BLOCK_IP:${CACHE}/" "${CACHE}/" 2>/dev/null || true
+}
+
+push_artifacts() {
+    BLOCK_IP="${BLOCK_IP:-192.168.0.145}"
+    rsync -az "${CACHE}/" "$BLOCK_IP:${CACHE}/" 2>/dev/null || true
+}
+
+deps_satisfied() {
+    local deps="$1"
+    [ -z "$deps" ] && return 0
+    for dep in $(echo "$deps" | tr ',' ' '); do
+        if [ ! -f "${CACHE}/${dep}" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+pick_task() {
+    local ids
+    ids=$(sqlite3 "$DB" "SELECT id, deps FROM tasks WHERE status='PENDING' AND (assigned_node='' OR assigned_node IS NULL) ORDER BY id;")
+    [ -z "$ids" ] && return
+    while IFS='|' read -r id deps; do
+        # Refresh deps from artifact cache
+        fetch_artifacts
+        if deps_satisfied "$deps"; then
+            sqlite3 "$DB" "UPDATE tasks SET status='RUNNING', assigned_node='$NODE', started_at=datetime('now') WHERE id=$id;"
+            echo "$id"
+            return
+        fi
+    done <<<"$ids"
+}
+
+run_task() {
+    local id="$1"
+    local cmd outputs name
+    cmd=$(sqlite3 "$DB" "SELECT cmd FROM tasks WHERE id=$id;" | head -1)
+    outputs=$(sqlite3 "$DB" "SELECT outputs FROM tasks WHERE id=$id;")
+    name=$(sqlite3 "$DB" "SELECT name FROM tasks WHERE id=$id;")
+    
+    echo "[$NODE] Starting task $id: $name"
+    
+    cd "$WORKDIR"
+    if eval "$cmd" 2>"${WORKDIR}/task_${id}.stderr" >"${WORKDIR}/task_${id}.stdout"; then
+        # Copy outputs to artifact cache
+        for out in $(echo "$outputs" | tr ',' ' '); do
+            if [ -f "$out" ]; then
+                cp "$out" "${CACHE}/${out##*/}"
+            fi
+        done
+        push_artifacts
+        sqlite3 "$DB" "UPDATE tasks SET status='DONE', completed_at=datetime('now') WHERE id=$id;"
+        echo "[$NODE] DONE task $id: $name"
+    else
+        err=$(cat "${WORKDIR}/task_${id}.stderr" | sed "s/'/''/g")
+        sqlite3 "$DB" "UPDATE tasks SET status='FAILED', error_log='$err' WHERE id=$id;"
+        echo "[$NODE] FAILED task $id: $name"
+    fi
+}
+
+# Main loop
+while true; do
+    [ ! -f "$DB" ] && { sleep "$POLL_INTERVAL"; continue; }
+    task_id=$(pick_task)
+    if [ -n "$task_id" ] && [ "$task_id" != "0" ]; then
+        run_task "$task_id"
+    else
+        sleep "$POLL_INTERVAL"
+    fi
+done
