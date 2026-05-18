@@ -174,6 +174,30 @@ project-qd/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/project-qd.dir/build.make CMakeFiles/project-qd.dir/build
 .PHONY : project-qd/fast
 
+artifacts.o: artifacts.cpp.o
+.PHONY : artifacts.o
+
+# target to build an object file
+artifacts.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/project-qd.dir/build.make CMakeFiles/project-qd.dir/artifacts.cpp.o
+.PHONY : artifacts.cpp.o
+
+artifacts.i: artifacts.cpp.i
+.PHONY : artifacts.i
+
+# target to preprocess a source file
+artifacts.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/project-qd.dir/build.make CMakeFiles/project-qd.dir/artifacts.cpp.i
+.PHONY : artifacts.cpp.i
+
+artifacts.s: artifacts.cpp.s
+.PHONY : artifacts.s
+
+# target to generate assembly for a file
+artifacts.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/project-qd.dir/build.make CMakeFiles/project-qd.dir/artifacts.cpp.s
+.PHONY : artifacts.cpp.s
+
 config.o: config.cpp.o
 .PHONY : config.o
 
@@ -355,6 +379,9 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... project-qd"
+	@echo "... artifacts.o"
+	@echo "... artifacts.i"
+	@echo "... artifacts.s"
 	@echo "... config.o"
 	@echo "... config.i"
 	@echo "... config.s"

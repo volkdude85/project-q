@@ -147,6 +147,7 @@ CMakeFiles/project-qd.dir/coordinator.cpp.o: \
  /usr/include/string.h /usr/include/strings.h \
  /home/volkdude/Projects/project-q/src/daemon/config.h \
  /home/volkdude/Projects/project-q/src/daemon/queue_sync.h \
+ /home/volkdude/Projects/project-q/src/daemon/artifacts.h \
  /usr/include/c++/16.1.1/iostream /usr/include/c++/16.1.1/ostream \
  /usr/include/c++/16.1.1/bits/ostream.h /usr/include/c++/16.1.1/ios \
  /usr/include/c++/16.1.1/exception \

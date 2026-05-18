@@ -1,108 +1,113 @@
 #include "taskrunner.h"
-#include <cstring>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/time.h>
-#include <signal.h>
-#include <chrono>
-#include <thread>
-#include <fcntl.h>
-#include <cstdlib>
+#include <QDir>
+#include <QFile>
+#include <QDebug>
 
-TaskResult TaskRunner::execute(const std::string& cmd, int timeoutSec,
-                                const std::string& workDir) {
-    TaskResult result;
+TaskRunner::TaskRunner(int taskId, const QString &name, const QString &command,
+                       const QString &workDir, int timeoutSec, QObject *parent)
+    : QObject(parent)
+    , m_taskId(taskId)
+    , m_name(name)
+    , m_command(command)
+    , m_workDir(workDir)
+    , m_timeoutSec(timeoutSec)
+    , m_status("pending")
+{
+    m_outputDir = workDir + "/task-" + QString::number(taskId);
+}
 
-    // Create pipes for stdout and stderr
-    int outPipe[2], errPipe[2];
-    if (pipe(outPipe) < 0 || pipe(errPipe) < 0) {
-        result.stderr = "pipe() failed";
-        return result;
-    }
-
-    // Make write ends non-blocking to avoid deadlocks
-    fcntl(outPipe[1], F_SETFL, O_NONBLOCK);
-    fcntl(errPipe[1], F_SETFL, O_NONBLOCK);
-
-    pid_t pid = fork();
-    if (pid < 0) {
-        result.stderr = "fork() failed";
-        close(outPipe[0]); close(outPipe[1]);
-        close(errPipe[0]); close(errPipe[1]);
-        return result;
-    }
-
-    if (pid == 0) {
-        // Child process
-        close(outPipe[0]);
-        close(errPipe[0]);
-        dup2(outPipe[1], STDOUT_FILENO);
-        dup2(errPipe[1], STDERR_FILENO);
-        close(outPipe[1]);
-        close(errPipe[1]);
-
-        // Change to work directory
-        if (!workDir.empty()) chdir(workDir.c_str());
-
-        // Execute via shell
-        execl("/bin/sh", "sh", "-c", cmd.c_str(), nullptr);
-        _exit(127); // exec failed
-    }
-
-    // Parent process — close write ends
-    close(outPipe[1]);
-    close(errPipe[1]);
-
-    // Wait for process with timeout
-    auto start = std::chrono::steady_clock::now();
-    int status = 0;
-    bool timedOut = false;
-
-    while (true) {
-        pid_t wpid = waitpid(pid, &status, WNOHANG);
-        if (wpid == pid) {
-            result.durationSec = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - start).count();
-            if (WIFEXITED(status)) result.exitCode = WEXITSTATUS(status);
-            else result.exitCode = -1;
-            break;
+TaskRunner::~TaskRunner() {
+    if (m_process) {
+        if (m_process->state() != QProcess::NotRunning) {
+            m_process->kill();
+            m_process->waitForFinished(3000);
         }
+    }
+}
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::steady_clock::now() - start).count();
-        if (elapsed >= timeoutSec) {
-            // Kill the child
-            kill(pid, SIGTERM);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            kill(pid, SIGKILL);
-            waitpid(pid, &status, 0);
-            result.exitCode = -1;
-            result.durationSec = timeoutSec;
-            timedOut = true;
-            break;
-        }
+void TaskRunner::start() {
+    // Create output directory
+    QDir().mkpath(m_outputDir);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    m_status = "running";
+
+    m_process = new QProcess(this);
+    m_process->setWorkingDirectory(m_workDir);
+    m_process->setProcessChannelMode(QProcess::SeparateChannels);
+
+    // Redirect stdout and stderr to files
+    QString stdoutPath = m_outputDir + "/stdout.log";
+    QString stderrPath = m_outputDir + "/stderr.log";
+    m_process->setStandardOutputFile(stdoutPath);
+    m_process->setStandardErrorFile(stderrPath);
+
+    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, &TaskRunner::onProcessFinished);
+
+    qDebug() << "[TASK" << m_taskId << "] Starting:" << m_command.left(80);
+
+    m_elapsed.start();
+
+    // Timeout timer
+    m_timeoutTimer = new QTimer(this);
+    m_timeoutTimer->setSingleShot(true);
+    connect(m_timeoutTimer, &QTimer::timeout, this, &TaskRunner::onTimeout);
+    m_timeoutTimer->start(m_timeoutSec * 1000);
+
+    // Execute via shell
+#ifdef Q_OS_WIN
+    m_process->start("cmd.exe", QStringList() << "/c" << m_command);
+#else
+    m_process->start("/bin/sh", QStringList() << "-c" << m_command);
+#endif
+}
+
+void TaskRunner::kill() {
+    if (m_process && m_process->state() != QProcess::NotRunning) {
+        qDebug() << "[TASK" << m_taskId << "] Killing...";
+        m_process->kill();
+    }
+    m_status = "killed";
+}
+
+void TaskRunner::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+    m_timeoutTimer->stop();
+    int durationMs = static_cast<int>(m_elapsed.elapsed());
+    int durationSec = durationMs / 1000;
+
+    if (exitStatus == QProcess::CrashExit) {
+        m_status = "failed";
+    } else if (exitCode == 0) {
+        m_status = "done";
+    } else {
+        m_status = "failed";
     }
 
-    // Read output
-    char buf[4096];
-    int n;
-    while ((n = read(outPipe[0], buf, sizeof(buf) - 1)) > 0) {
-        buf[n] = 0;
-        result.stdout += buf;
-    }
-    while ((n = read(errPipe[0], buf, sizeof(buf) - 1)) > 0) {
-        buf[n] = 0;
-        result.stderr += buf;
-    }
+    // Read output files
+    QStringList outputs;
+    QString stdoutPath = m_outputDir + "/stdout.log";
+    QString stderrPath = m_outputDir + "/stderr.log";
 
-    close(outPipe[0]);
-    close(errPipe[0]);
-
-    if (timedOut) {
-        result.stderr += "\n[TIMEOUT] Task exceeded " + std::to_string(timeoutSec) + "s";
+    QFile stdoutFile(stdoutPath);
+    if (stdoutFile.open(QIODevice::ReadOnly)) {
+        outputs.append(stdoutPath);
+        stdoutFile.close();
     }
 
-    return result;
+    QString errorLog;
+    QFile stderrFile(stderrPath);
+    if (stderrFile.open(QIODevice::ReadOnly)) {
+        errorLog = QString::fromUtf8(stderrFile.readAll().left(4096)); // cap at 4KB
+        stderrFile.close();
+    }
+
+    qDebug() << "[TASK" << m_taskId << "] Finished:" << m_status << "(" << durationSec << "s, exit:" << exitCode << ")";
+
+    emit completed(m_status, durationSec, outputs, errorLog);
+}
+
+void TaskRunner::onTimeout() {
+    qDebug() << "[TASK" << m_taskId << "] Timeout after" << m_timeoutSec << "s";
+    m_status = "timeout";
+    kill();
 }

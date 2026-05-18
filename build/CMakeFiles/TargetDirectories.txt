@@ -1,0 +1,9 @@
+/home/volkdude/Projects/project-q/build/CMakeFiles/project-qd.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/edit_cache.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/rebuild_cache.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/list_install_components.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/install.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/install/local.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/install/strip.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/project-qd_autogen_timestamp_deps.dir
+/home/volkdude/Projects/project-q/build/CMakeFiles/project-qd_autogen.dir

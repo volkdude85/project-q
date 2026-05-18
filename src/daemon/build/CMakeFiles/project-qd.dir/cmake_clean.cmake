@@ -1,5 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/project-qd.dir/link.d"
+  "CMakeFiles/project-qd.dir/artifacts.cpp.o"
+  "CMakeFiles/project-qd.dir/artifacts.cpp.o.d"
   "CMakeFiles/project-qd.dir/config.cpp.o"
   "CMakeFiles/project-qd.dir/config.cpp.o.d"
   "CMakeFiles/project-qd.dir/coordinator.cpp.o"

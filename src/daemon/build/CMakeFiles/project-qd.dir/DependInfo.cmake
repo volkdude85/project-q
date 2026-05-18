@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/volkdude/Projects/project-q/src/daemon/artifacts.cpp" "CMakeFiles/project-qd.dir/artifacts.cpp.o" "gcc" "CMakeFiles/project-qd.dir/artifacts.cpp.o.d"
   "/home/volkdude/Projects/project-q/src/daemon/config.cpp" "CMakeFiles/project-qd.dir/config.cpp.o" "gcc" "CMakeFiles/project-qd.dir/config.cpp.o.d"
   "/home/volkdude/Projects/project-q/src/daemon/coordinator.cpp" "CMakeFiles/project-qd.dir/coordinator.cpp.o" "gcc" "CMakeFiles/project-qd.dir/coordinator.cpp.o.d"
   "/home/volkdude/Projects/project-q/src/daemon/main.cpp" "CMakeFiles/project-qd.dir/main.cpp.o" "gcc" "CMakeFiles/project-qd.dir/main.cpp.o.d"

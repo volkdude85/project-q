@@ -1,26 +1,31 @@
-#pragma once
-#include <string>
-#include <vector>
+#ifndef PROJECTQD_QUEUE_SYNC_H
+#define PROJECTQD_QUEUE_SYNC_H
 
-struct QueueTask {
-    int id = 0;
-    std::string name;
-    std::string cmd;
-    std::string deps;
-    std::string status;
+#include <QObject>
+#include <QSqlDatabase>
+#include <QJsonArray>
+#include "config.h"
+#include "coordinator.h"
+
+class QueueSync : public QObject {
+    Q_OBJECT
+public:
+    explicit QueueSync(const DaemonConfig &config, Coordinator *coordinator, QObject *parent = nullptr);
+    ~QueueSync();
+
+    bool open();
+    void close();
+
+    int addTask(const QString &name, const QString &command, int timeoutSec = 1800);
+    bool markTask(int taskId, const QString &status);
+    QJsonArray listTasks(const QString &statusFilter = QString());
+
+private:
+    bool createSchema();
+
+    DaemonConfig m_config;
+    Coordinator *m_coordinator = nullptr;
+    QSqlDatabase m_db;
 };
 
-namespace QueueSync {
-    // Get all PENDING tasks from SQLite
-    std::vector<QueueTask> getPendingTasks(const std::string& dbPath);
-
-    // Get a task's outputs field by ID
-    std::string getTaskOutputs(const std::string& dbPath, int taskId);
-
-    // Update a task's status
-    bool updateTaskStatus(const std::string& dbPath, int taskId,
-                          const std::string& newStatus);
-
-    // Reset a task to PENDING (for re-queue after timeout)
-    bool resetTask(const std::string& dbPath, int taskId);
-}
+#endif

@@ -1,30 +1,42 @@
-#pragma once
-#include <string>
-#include <cstdint>
+#ifndef PROJECTQD_CONFIG_H
+#define PROJECTQD_CONFIG_H
+
+#include <QString>
+#include <QHostAddress>
+#include <QCommandLineParser>
+#include <QCoreApplication>
 
 struct DaemonConfig {
-    // Coordinator mode
+    // Mode
     bool isCoordinator = false;
 
     // Network
-    uint16_t tcpPort = 9100;
-    uint16_t udpPort = 9101;
-    std::string coordinatorHost = "192.168.0.145";
+    QHostAddress bindAddress = QHostAddress::Any;
+    quint16 tcpPort = 9100;
+    quint16 udpPort = 9101;
+
+    // Coordinator address (for workers)
+    QString coordinatorHost;
+    quint16 coordinatorPort = 9100;
 
     // Node identity
-    std::string nodeName;
-    std::string capabilities; // e.g. "gpu,x86_64,32gb_ram"
+    QString nodeName;
 
     // Heartbeat
     int heartbeatIntervalSec = 5;
     int heartbeatTimeoutSec = 20;
 
-    // Task execution
-    int taskTimeoutSec = 1800;
-    std::string workDir = "/tmp/project-qd-work";
-    std::string dbPath;
-    std::string artifactDir;
+    // Task limits
+    int maxConcurrentTasks = 4;
+    int defaultTaskTimeoutSec = 1800;
 
-    static DaemonConfig fromArgs(int argc, char** argv);
-    void print() const;
+    // Data paths
+    QString dataDir;
+    QString queueDbPath;
+    QString workDir;
+
+    static DaemonConfig fromCommandLine(QCoreApplication &app);
+    void dump() const;
 };
+
+#endif // PROJECTQD_CONFIG_H

@@ -1,59 +1,75 @@
-#pragma once
-#include <cstdint>
-#include <string>
-#include <vector>
-#include <cstring>
+#ifndef PROJECTQD_PROTOCOL_H
+#define PROJECTQD_PROTOCOL_H
 
-// ── UDP Heartbeat (24 bytes, fire-and-forget) ────────────────────
+#include <QByteArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <cstdint>
+
+// ─── UDP Heartbeat ────────────────────────────────────────────────────
+// Wire format: [magic:4][node_id:16][load:4] = 24 bytes
+// magic = 0x50514D00 ("PQM\0")
+// node_id = hostname left-padded with spaces, null-terminated
+// load = current CPU load * 100 (uint32_t, network byte order)
+
 #pragma pack(push, 1)
 struct HeartbeatPacket {
-    uint32_t magic = 0x50514D00;  // "PQM\0"
-    char nodeId[16] = {0};
-    uint32_t load = 0;            // CPU load * 100
+    uint32_t magic;        // 0x50514D00
+    char     nodeId[16];   // null-padded hostname
+    uint32_t load;         // CPU load * 100
 };
 #pragma pack(pop)
 
-// ── TCP Frame (length-prefixed JSON) ─────────────────────────────
-struct TcpFrame {
-    uint32_t length;   // network byte order
-    std::string data;
+static_assert(sizeof(HeartbeatPacket) == 24, "HeartbeatPacket must be 24 bytes");
 
-    // Build from string
-    static std::vector<char> encode(const std::string& json);
+constexpr uint32_t HEARTBEAT_MAGIC = 0x50514D00;
 
-    // Parse from buffer (returns bytes consumed, or 0 if incomplete)
-    static int decode(const char* buf, int buflen, TcpFrame& out);
+HeartbeatPacket makeHeartbeat(const QString &nodeName, uint32_t load);
+bool isValidHeartbeat(const HeartbeatPacket &pkt);
+QString heartbeatNodeName(const HeartbeatPacket &pkt);
+
+// ─── TCP Command Protocol ─────────────────────────────────────────────
+// Length-prefixed JSON frames:
+// [length:4 (uint32_t, network byte order)][JSON payload:length]
+//
+// Available commands:
+
+enum class TcpCmd {
+    Register,
+    RegisterAck,
+    HeartbeatAck,
+    TaskAssign,
+    TaskResult,
+    TaskResultAck,
+    NodeList,
+    ArtifactRequest,
+    ArtifactChunk,
+    ArtifactAck,
+    Error,
+    Ping,
+    Pong
 };
 
-// ── JSON message helpers ─────────────────────────────────────────
-namespace Proto {
-    // Register msg: {"cmd":"register","node":"porsche","capabilities":"gpu,x86_64"}
-    std::string makeRegister(const std::string& node, const std::string& caps);
+QString tcpCmdToString(TcpCmd cmd);
+TcpCmd stringToTcpCmd(const QString &str);
 
-    // Task assign: {"cmd":"task_assign","task_id":N,"name":"...","cmd":"..."}
-    std::string makeTaskAssign(int taskId, const std::string& name, const std::string& cmd);
+// Frame helpers
+QByteArray encodeFrame(const QJsonObject &obj);
+QJsonObject decodeFrame(const QByteArray &data);
 
-    // Task result: {"cmd":"task_result","task_id":N,"status":"done|failed","duration_sec":N,"output":"..."}
-    std::string makeTaskResult(int taskId, const std::string& status,
-                               int durationSec, const std::string& output);
+// Command builders
+QJsonObject buildRegister(const QString &nodeName, const QStringList &capabilities);
+QJsonObject buildRegisterAck(const QString &nodeName, const QString &coordinatorVersion);
+QJsonObject buildHeartbeatAck(uint32_t load);
+QJsonObject buildTaskAssign(int taskId, const QString &name, const QString &command, int timeoutSec);
+QJsonObject buildTaskResult(int taskId, const QString &status, const QStringList &outputs, int durationSec, const QString &errorLog);
+QJsonObject buildTaskResultAck(int taskId);
+QJsonObject buildNodeList(const QJsonArray &nodes);
+QJsonObject buildArtifactRequest(int taskId, const QString &filename);
+QJsonObject buildArtifactChunk(int taskId, const QString &filename, int chunkIndex, int totalChunks, const QByteArray &data);
+QJsonObject buildArtifactAck(int taskId, const QString &filename);
+QJsonObject buildError(const QString &message);
+QJsonObject buildPing();
+QJsonObject buildPong();
 
-    // Node list response
-    std::string makeNodeList(const std::string& jsonArray);
-
-    // Heartbeat ACK
-    std::string makeHeartbeatAck(uint32_t load);
-
-    // Artifact sync request: {"cmd":"artifact_sync","task_id":N,"outputs":"file1,file2"}
-    std::string makeArtifactSync(int taskId, const std::string& outputs);
-
-    // Artifact data: {"cmd":"artifact_data","task_id":N,"path":"...","size":N,"data":"<base64>"}
-    std::string makeArtifactData(int taskId, const std::string& path,
-                                 int size, const std::string& base64Data);
-
-    // Artifact ack: {"cmd":"artifact_ack","task_id":N,"path":"...","status":"ok|error"}
-    std::string makeArtifactAck(int taskId, const std::string& path,
-                                const std::string& status);
-
-    // Parse cmd field from a JSON message
-    std::string parseCmd(const std::string& json);
-}
+#endif // PROJECTQD_PROTOCOL_H

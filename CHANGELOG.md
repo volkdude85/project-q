@@ -35,3 +35,27 @@
 - Rebuild and test full dispatch→execute→result cycle
 - PQD-007: Artifact sync over TCP (replace rsync)
 - PQD-008: Deploy via systemd on Block + Porsche
+
+## 2026-05-18 — Phase 4: PQD-007 Artifact Sync Over TCP
+
+**Model:** deepseek-v4-flash  
+**Provider:** ollama-cloud  
+
+### Added
+- `src/daemon/artifacts.{h,cpp}` — Base64 encode/decode (no external deps), file scanner for output artifacts. Gated on `outputs` field in queue task.
+
+### Modified
+- `protocol.{h,cpp}` — Added `makeArtifactSync`, `makeArtifactData`, `makeArtifactAck` message builders for artifact transfer over TCP
+- `worker.cpp` — After task result, reads `outputs` field from SQLite, finds files in workdir, base64-encodes and sends as `artifact_data` frames
+- `coordinator.cpp` — Handles `artifact_data` frames, base64-decodes, writes to `~/.local/share/project-q/cache/artifacts/`. Sends `artifact_ack` on success.
+- `queue_sync.{h,cpp}` — Added `getTaskOutputs()` to read a task's `outputs` column from SQLite
+- `CMakeLists.txt` — Added `artifacts.cpp` to the build
+
+### Build Result
+- Clean compile, zero warnings (GCC 16.1.1)
+- **End-to-end verified**: task dispatched → executed → result reported → artifact base64'd over TCP → decoded on coordinator → file contents matched
+
+### Known Items
+- Farm SSH still broken on all nodes (Porsche connection reset, Laptop no key, Ally offline)
+- Dad joke names pending: "Project Queue'd", "farm-fist", "q-demon", "UDP speed demon"
+- Task 008b added to palace: private GitHub repo for cross-machine access

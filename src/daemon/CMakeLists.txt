@@ -1,22 +1,17 @@
-# Project Q Daemon — Persistent C++ Farm Mesh
-# Replaces SSH polling with UDP heartbeat + TCP command channel
 cmake_minimum_required(VERSION 3.20)
 project(project-qd VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
-# SQLite3 — bundled via CPPSQLite or system package
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(SQLITE3 sqlite3)
-endif()
-if(NOT SQLITE3_FOUND)
-    find_library(SQLITE3_LIBRARIES sqlite3)
-    find_path(SQLITE3_INCLUDE_DIRS sqlite3.h)
-endif()
+find_package(Qt6 REQUIRED COMPONENTS Core Network Sql)
+find_package(Threads REQUIRED)
 
-add_executable(project-qd
+set(SOURCES
     main.cpp
     config.cpp
     protocol.cpp
@@ -26,9 +21,25 @@ add_executable(project-qd
     queue_sync.cpp
 )
 
-target_include_directories(project-qd PRIVATE ${SQLITE3_INCLUDE_DIRS})
-target_link_libraries(project-qd PRIVATE ${SQLITE3_LIBRARIES} pthread)
+set(HEADERS
+    config.h
+    protocol.h
+    coordinator.h
+    worker.h
+    taskrunner.h
+    queue_sync.h
+)
 
-# Install
-install(TARGETS project-qd RUNTIME DESTINATION bin)
-install(FILES project-qd-coordinator.service project-qd@.service DESTINATION lib/systemd/system)
+add_executable(project-qd ${SOURCES} ${HEADERS})
+
+target_link_libraries(project-qd PRIVATE
+    Qt6::Core
+    Qt6::Network
+    Qt6::Sql
+    Threads::Threads
+)
+
+target_include_directories(project-qd PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Install targets for systemd service
+install(TARGETS project-qd RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

@@ -9,6 +9,7 @@ project-qd: \
   CMakeFiles/project-qd.dir/worker.cpp.o \
   CMakeFiles/project-qd.dir/taskrunner.cpp.o \
   CMakeFiles/project-qd.dir/queue_sync.cpp.o \
+  CMakeFiles/project-qd.dir/artifacts.cpp.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libsqlite3.so \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libpthread.a \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libstdc++.so \
@@ -62,6 +63,8 @@ CMakeFiles/project-qd.dir/worker.cpp.o:
 CMakeFiles/project-qd.dir/taskrunner.cpp.o:
 
 CMakeFiles/project-qd.dir/queue_sync.cpp.o:
+
+CMakeFiles/project-qd.dir/artifacts.cpp.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libsqlite3.so:
 

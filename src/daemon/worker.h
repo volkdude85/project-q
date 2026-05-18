@@ -1,30 +1,47 @@
-#pragma once
-#include <string>
-#include <thread>
-#include <atomic>
+#ifndef PROJECTQD_WORKER_H
+#define PROJECTQD_WORKER_H
 
-class Worker {
+#include <QObject>
+#include <QTcpSocket>
+#include <QUdpSocket>
+#include <QTimer>
+#include "config.h"
+#include "taskrunner.h"
+
+class Worker : public QObject {
+    Q_OBJECT
 public:
-    explicit Worker(const class DaemonConfig& cfg);
+    explicit Worker(const DaemonConfig &config, QObject *parent = nullptr);
     ~Worker();
 
     bool start();
-    void run();
     void stop();
 
-private:
-    const DaemonConfig& config;
-    int tcpFd = -1;
-    int udpFd = -1;
-    std::atomic<bool> running{false};
-    std::thread heartbeatThread;
+signals:
+    void connected();
+    void disconnected();
+    void taskStarted(int taskId);
+    void taskCompleted(int taskId, const QString &status);
 
-    // Read buffer for TCP
-    std::string readBuf;
-
-    bool connectTcp();
-    bool sendRegister();
+private slots:
+    void onConnected();
+    void onDisconnected();
+    void onReadyRead();
     void sendHeartbeat();
-    void handleMessage(const std::string& msg);
-    void runTask(int taskId, const std::string& name, const std::string& cmd);
+    void reconnect();
+
+private:
+    void processCommand(const QJsonObject &msg);
+    void handleTaskAssign(const QJsonObject &msg);
+    void handlePing();
+    void sendRegister();
+
+    DaemonConfig m_config;
+    QTcpSocket *m_tcpSocket = nullptr;
+    QUdpSocket *m_udpSocket = nullptr;
+    QTimer *m_heartbeatTimer = nullptr;
+    QTimer *m_reconnectTimer = nullptr;
+    QHash<int, TaskRunner*> m_runningTasks;
 };
+
+#endif

@@ -1,103 +1,190 @@
 #include "protocol.h"
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QByteArray>
 #include <cstring>
-#include <sstream>
-#include <arpa/inet.h>
+#include <QtEndian>
 
-// ── TCP Frame encode ─────────────────────────────────────────────
-std::vector<char> TcpFrame::encode(const std::string& json) {
-    uint32_t len = htonl(static_cast<uint32_t>(json.size()));
-    std::vector<char> buf(sizeof(len) + json.size());
-    memcpy(buf.data(), &len, sizeof(len));
-    memcpy(buf.data() + sizeof(len), json.data(), json.size());
-    return buf;
+// ─── UDP Heartbeat ────────────────────────────────────────────────────
+
+HeartbeatPacket makeHeartbeat(const QString &nodeName, uint32_t load) {
+    HeartbeatPacket pkt{};
+    pkt.magic = qToBigEndian<uint32_t>(HEARTBEAT_MAGIC);
+    QByteArray nameBytes = nodeName.toUtf8().left(15);
+    std::memcpy(pkt.nodeId, nameBytes.constData(), nameBytes.size());
+    pkt.nodeId[nameBytes.size()] = '\0';
+    pkt.load = qToBigEndian<uint32_t>(load);
+    return pkt;
 }
 
-// ── TCP Frame decode ─────────────────────────────────────────────
-int TcpFrame::decode(const char* buf, int buflen, TcpFrame& out) {
-    if (buflen < 4) return 0;  // need length prefix
-    uint32_t netLen;
-    memcpy(&netLen, buf, 4);
-    uint32_t msgLen = ntohl(netLen);
-    if (static_cast<uint32_t>(buflen - 4) < msgLen) return 0; // incomplete
-    out.length = msgLen;
-    out.data.assign(buf + 4, msgLen);
-    return 4 + msgLen;
+bool isValidHeartbeat(const HeartbeatPacket &pkt) {
+    return qFromBigEndian<uint32_t>(pkt.magic) == HEARTBEAT_MAGIC;
 }
 
-// ── JSON helpers (minimal — no json lib dep) ─────────────────────
-// These produce valid JSON manually. For complex parsing we'd
-// link jsoncpp or nlohmann, but for now manual is fine.
+QString heartbeatNodeName(const HeartbeatPacket &pkt) {
+    return QString::fromUtf8(pkt.nodeId, strnlen(pkt.nodeId, 16));
+}
 
-static std::string jsonEscape(const std::string& s) {
-    std::string out;
-    for (char c : s) {
-        if (c == '"') out += "\\\"";
-        else if (c == '\\') out += "\\\\";
-        else if (c == '\n') out += "\\n";
-        else if (c == '\r') out += "\\r";
-        else if (c == '\t') out += "\\t";
-        else out += c;
+// ─── TCP Command Protocol ─────────────────────────────────────────────
+
+QString tcpCmdToString(TcpCmd cmd) {
+    switch (cmd) {
+        case TcpCmd::Register: return "register";
+        case TcpCmd::RegisterAck: return "register_ack";
+        case TcpCmd::HeartbeatAck: return "heartbeat_ack";
+        case TcpCmd::TaskAssign: return "task_assign";
+        case TcpCmd::TaskResult: return "task_result";
+        case TcpCmd::TaskResultAck: return "task_result_ack";
+        case TcpCmd::NodeList: return "node_list";
+        case TcpCmd::ArtifactRequest: return "artifact_request";
+        case TcpCmd::ArtifactChunk: return "artifact_chunk";
+        case TcpCmd::ArtifactAck: return "artifact_ack";
+        case TcpCmd::Error: return "error";
+        case TcpCmd::Ping: return "ping";
+        case TcpCmd::Pong: return "pong";
     }
-    return out;
+    return "unknown";
 }
 
-std::string Proto::makeRegister(const std::string& node, const std::string& caps) {
-    return "{\"cmd\":\"register\",\"node\":\"" + jsonEscape(node) +
-           "\",\"capabilities\":\"" + jsonEscape(caps) + "\"}";
+TcpCmd stringToTcpCmd(const QString &str) {
+    if (str == "register") return TcpCmd::Register;
+    if (str == "register_ack") return TcpCmd::RegisterAck;
+    if (str == "heartbeat_ack") return TcpCmd::HeartbeatAck;
+    if (str == "task_assign") return TcpCmd::TaskAssign;
+    if (str == "task_result") return TcpCmd::TaskResult;
+    if (str == "task_result_ack") return TcpCmd::TaskResultAck;
+    if (str == "node_list") return TcpCmd::NodeList;
+    if (str == "artifact_request") return TcpCmd::ArtifactRequest;
+    if (str == "artifact_chunk") return TcpCmd::ArtifactChunk;
+    if (str == "artifact_ack") return TcpCmd::ArtifactAck;
+    if (str == "error") return TcpCmd::Error;
+    if (str == "ping") return TcpCmd::Ping;
+    if (str == "pong") return TcpCmd::Pong;
+    return TcpCmd::Error;
 }
 
-std::string Proto::makeTaskAssign(int taskId, const std::string& name, const std::string& cmd) {
-    return "{\"cmd\":\"task_assign\",\"task_id\":" + std::to_string(taskId) +
-           ",\"name\":\"" + jsonEscape(name) +
-           "\",\"cmd\":\"" + jsonEscape(cmd) + "\"}";
+QByteArray encodeFrame(const QJsonObject &obj) {
+    QByteArray json = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    uint32_t len = qToBigEndian<uint32_t>(json.size());
+    QByteArray frame;
+    frame.append(reinterpret_cast<const char*>(&len), 4);
+    frame.append(json);
+    return frame;
 }
 
-std::string Proto::makeTaskResult(int taskId, const std::string& status,
-                                   int durationSec, const std::string& output) {
-    return "{\"cmd\":\"task_result\",\"task_id\":" + std::to_string(taskId) +
-           ",\"status\":\"" + status +
-           "\",\"duration_sec\":" + std::to_string(durationSec) +
-           ",\"output\":\"" + jsonEscape(output) + "\"}";
+QJsonObject decodeFrame(const QByteArray &data) {
+    if (data.size() < 4) return {};
+    QJsonDocument doc = QJsonDocument::fromJson(data.mid(4));
+    return doc.object();
 }
 
-std::string Proto::makeNodeList(const std::string& jsonArray) {
-    return "{\"cmd\":\"node_list\",\"nodes\":" + jsonArray + "}";
+// ─── Command Builders ─────────────────────────────────────────────────
+
+QJsonObject buildRegister(const QString &nodeName, const QStringList &capabilities) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::Register);
+    msg["node"] = nodeName;
+    QJsonArray caps;
+    for (const auto &c : capabilities) caps.append(c);
+    msg["capabilities"] = caps;
+    return msg;
 }
 
-std::string Proto::makeHeartbeatAck(uint32_t load) {
-    return "{\"cmd\":\"heartbeat_ack\",\"load\":" + std::to_string(load) + "}";
+QJsonObject buildRegisterAck(const QString &nodeName, const QString &coordinatorVersion) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::RegisterAck);
+    msg["node"] = nodeName;
+    msg["version"] = coordinatorVersion;
+    return msg;
 }
 
-std::string Proto::makeArtifactSync(int taskId, const std::string& outputs) {
-    return "{\"cmd\":\"artifact_sync\",\"task_id\":" + std::to_string(taskId) +
-           ",\"outputs\":\"" + jsonEscape(outputs) + "\"}";
+QJsonObject buildHeartbeatAck(uint32_t load) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::HeartbeatAck);
+    msg["load"] = static_cast<double>(load);
+    return msg;
 }
 
-std::string Proto::makeArtifactData(int taskId, const std::string& path,
-                                     int size, const std::string& base64Data) {
-    return "{\"cmd\":\"artifact_data\",\"task_id\":" + std::to_string(taskId) +
-           ",\"path\":\"" + jsonEscape(path) +
-           "\",\"size\":" + std::to_string(size) +
-           ",\"data\":\"" + base64Data + "\"}";
+QJsonObject buildTaskAssign(int taskId, const QString &name, const QString &command, int timeoutSec) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::TaskAssign);
+    msg["task_id"] = taskId;
+    msg["name"] = name;
+    msg["command"] = command;
+    msg["timeout"] = timeoutSec;
+    return msg;
 }
 
-std::string Proto::makeArtifactAck(int taskId, const std::string& path,
-                                    const std::string& status) {
-    return "{\"cmd\":\"artifact_ack\",\"task_id\":" + std::to_string(taskId) +
-           ",\"path\":\"" + jsonEscape(path) +
-           "\",\"status\":\"" + status + "\"}";
+QJsonObject buildTaskResult(int taskId, const QString &status, const QStringList &outputs, int durationSec, const QString &errorLog) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::TaskResult);
+    msg["task_id"] = taskId;
+    msg["status"] = status;
+    QJsonArray outs;
+    for (const auto &o : outputs) outs.append(o);
+    msg["outputs"] = outs;
+    msg["duration_sec"] = durationSec;
+    if (!errorLog.isEmpty()) msg["error_log"] = errorLog;
+    return msg;
 }
 
-// Parse first JSON key after "cmd": — naive, no json parser
-std::string Proto::parseCmd(const std::string& json) {
-    // Find "cmd":"..." in the JSON
-    auto cmdPos = json.find("\"cmd\"");
-    if (cmdPos == std::string::npos) return "";
-    auto colon = json.find(':', cmdPos + 5);
-    if (colon == std::string::npos) return "";
-    auto firstQuote = json.find('"', colon + 1);
-    if (firstQuote == std::string::npos) return "";
-    auto secondQuote = json.find('"', firstQuote + 1);
-    if (secondQuote == std::string::npos) return "";
-    return json.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+QJsonObject buildTaskResultAck(int taskId) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::TaskResultAck);
+    msg["task_id"] = taskId;
+    return msg;
+}
+
+QJsonObject buildNodeList(const QJsonArray &nodes) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::NodeList);
+    msg["nodes"] = nodes;
+    return msg;
+}
+
+QJsonObject buildArtifactRequest(int taskId, const QString &filename) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::ArtifactRequest);
+    msg["task_id"] = taskId;
+    msg["filename"] = filename;
+    return msg;
+}
+
+QJsonObject buildArtifactChunk(int taskId, const QString &filename, int chunkIndex, int totalChunks, const QByteArray &data) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::ArtifactChunk);
+    msg["task_id"] = taskId;
+    msg["filename"] = filename;
+    msg["chunk"] = chunkIndex;
+    msg["total_chunks"] = totalChunks;
+    msg["data"] = QString::fromLatin1(data.toBase64());
+    return msg;
+}
+
+QJsonObject buildArtifactAck(int taskId, const QString &filename) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::ArtifactAck);
+    msg["task_id"] = taskId;
+    msg["filename"] = filename;
+    return msg;
+}
+
+QJsonObject buildError(const QString &message) {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::Error);
+    msg["message"] = message;
+    return msg;
+}
+
+QJsonObject buildPing() {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::Ping);
+    return msg;
+}
+
+QJsonObject buildPong() {
+    QJsonObject msg;
+    msg["cmd"] = tcpCmdToString(TcpCmd::Pong);
+    return msg;
 }

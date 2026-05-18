@@ -1,65 +1,121 @@
 #include "config.h"
-#include <iostream>
-#include <cstring>
-#include <unistd.h>
-#include <cstdlib>
+#include <QCommandLineParser>
+#include <QDir>
+#include <QStandardPaths>
+#include <QHostInfo>
+#include <QDebug>
 
-DaemonConfig DaemonConfig::fromArgs(int argc, char** argv) {
+DaemonConfig DaemonConfig::fromCommandLine(QCoreApplication &app) {
+    QCommandLineParser parser;
+    parser.setApplicationDescription("Project-Qd: Distributed compile farm daemon");
+
+    // Mode
+    parser.addOption(QCommandLineOption({"c", "coordinator"}, "Run as coordinator"));
+    parser.addOption(QCommandLineOption({"w", "worker"}, "Run as worker"));
+
+    // Network
+    parser.addOption(QCommandLineOption("bind", "Bind address", "addr", "0.0.0.0"));
+    parser.addOption(QCommandLineOption("tcp-port", "TCP command port", "port", "9100"));
+    parser.addOption(QCommandLineOption("udp-port", "UDP heartbeat port", "port", "9101"));
+
+    // Coordinator connection (worker mode)
+    parser.addOption(QCommandLineOption("connect", "Coordinator address:port", "host:port"));
+
+    // Identity
+    parser.addOption(QCommandLineOption("node-name", "Node name (default: hostname)", "name"));
+
+    // Paths
+    parser.addOption(QCommandLineOption("data-dir", "Data directory", "path"));
+    parser.addOption(QCommandLineOption("queue-db", "Queue database path", "path"));
+    parser.addOption(QCommandLineOption("work-dir", "Working directory for tasks", "path"));
+
+    // Heartbeat
+    parser.addOption(QCommandLineOption("hb-interval", "Heartbeat interval (sec)", "sec", "5"));
+    parser.addOption(QCommandLineOption("hb-timeout", "Heartbeat timeout (sec)", "sec", "20"));
+
+    // Task limits
+    parser.addOption(QCommandLineOption("max-tasks", "Max concurrent tasks", "n", "4"));
+    parser.addOption(QCommandLineOption("task-timeout", "Default task timeout (sec)", "sec", "1800"));
+
+    parser.addHelpOption();
+    parser.addVersionOption();
+    parser.process(app);
+
     DaemonConfig cfg;
-    char hostname[256];
-    if (gethostname(hostname, sizeof(hostname)) == 0) {
-        cfg.nodeName = hostname;
-    } else {
-        cfg.nodeName = "unknown";
+
+    // Mode detection
+    cfg.isCoordinator = parser.isSet("coordinator");
+    bool isWorker = parser.isSet("worker");
+
+    if (cfg.isCoordinator && isWorker) {
+        qFatal("Cannot run as both coordinator and worker");
+    }
+    if (!cfg.isCoordinator && !isWorker) {
+        qFatal("Must specify --coordinator or --worker");
     }
 
-    // Default paths
-    const char* home = getenv("HOME");
-    if (home) {
-        cfg.dbPath = std::string(home) + "/.local/share/project-q/queue.db";
-        cfg.artifactDir = std::string(home) + "/.local/share/project-q/cache/artifacts";
-    } else {
-        cfg.dbPath = "/tmp/project-q-queue.db";
-        cfg.artifactDir = "/tmp/project-q-artifacts";
-    }
+    // Network
+    cfg.bindAddress = QHostAddress(parser.value("bind"));
+    cfg.tcpPort = parser.value("tcp-port").toUShort();
+    cfg.udpPort = parser.value("udp-port").toUShort();
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--coordinator") == 0) {
-            cfg.isCoordinator = true;
-        } else if (strcmp(argv[i], "--worker") == 0) {
-            cfg.isCoordinator = false;
-        } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
-            cfg.tcpPort = static_cast<uint16_t>(std::stoi(argv[++i]));
-            cfg.udpPort = cfg.tcpPort + 1;
-        } else if (strcmp(argv[i], "--connect") == 0 && i + 1 < argc) {
-            // Parse "ip:port" or just "ip"
-            std::string conn = argv[++i];
-            auto colon = conn.find(':');
-            if (colon != std::string::npos) {
-                cfg.coordinatorHost = conn.substr(0, colon);
-                cfg.tcpPort = static_cast<uint16_t>(std::stoi(conn.substr(colon + 1)));
-                cfg.udpPort = cfg.tcpPort + 1;
-            } else {
-                cfg.coordinatorHost = conn;
-            }
-        } else if (strcmp(argv[i], "--name") == 0 && i + 1 < argc) {
-            cfg.nodeName = argv[++i];
-        } else if (strcmp(argv[i], "--caps") == 0 && i + 1 < argc) {
-            cfg.capabilities = argv[++i];
+    // Coordinator address
+    if (parser.isSet("connect")) {
+        QString conn = parser.value("connect");
+        int colon = conn.lastIndexOf(':');
+        if (colon > 0) {
+            cfg.coordinatorHost = conn.left(colon);
+            cfg.coordinatorPort = conn.mid(colon + 1).toUShort();
+        } else {
+            cfg.coordinatorHost = conn;
         }
     }
+
+    // Node name
+    cfg.nodeName = parser.isSet("node-name")
+        ? parser.value("node-name")
+        : QHostInfo::localHostName();
+
+    // Data paths
+    QString defaultDataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    cfg.dataDir = parser.isSet("data-dir") ? parser.value("data-dir") : defaultDataDir;
+    cfg.queueDbPath = parser.isSet("queue-db")
+        ? parser.value("queue-db")
+        : cfg.dataDir + "/queue.db";
+    cfg.workDir = parser.isSet("work-dir")
+        ? parser.value("work-dir")
+        : cfg.dataDir + "/work";
+
+    // Ensure directories exist
+    QDir().mkpath(cfg.dataDir);
+    QDir().mkpath(cfg.workDir);
+
+    // Heartbeat
+    cfg.heartbeatIntervalSec = parser.value("hb-interval").toInt();
+    cfg.heartbeatTimeoutSec = parser.value("hb-timeout").toInt();
+
+    // Task limits
+    cfg.maxConcurrentTasks = parser.value("max-tasks").toInt();
+    cfg.defaultTaskTimeoutSec = parser.value("task-timeout").toInt();
 
     return cfg;
 }
 
-void DaemonConfig::print() const {
-    std::cerr << "Project-Qd config:\n"
-              << "  Mode: " << (isCoordinator ? "COORDINATOR" : "WORKER") << "\n"
-              << "  Node: " << nodeName << "\n"
-              << "  TCP port: " << tcpPort << "\n"
-              << "  UDP port: " << udpPort << "\n"
-              << "  Coordinator: " << coordinatorHost << "\n"
-              << "  DB: " << dbPath << "\n"
-              << "  Artifacts: " << artifactDir << "\n"
-              << "  Caps: " << (capabilities.empty() ? "(none)" : capabilities) << "\n";
+void DaemonConfig::dump() const {
+    qDebug() << "── Project-Qd Config ──";
+    qDebug() << "Mode:" << (isCoordinator ? "COORDINATOR" : "WORKER");
+    qDebug() << "Node:" << nodeName;
+    qDebug() << "TCP:" << bindAddress.toString() << tcpPort;
+    qDebug() << "UDP:" << bindAddress.toString() << udpPort;
+    if (!isCoordinator) {
+        qDebug() << "Coordinator:" << coordinatorHost << coordinatorPort;
+    }
+    qDebug() << "Data dir:" << dataDir;
+    qDebug() << "Queue DB:" << queueDbPath;
+    qDebug() << "Work dir:" << workDir;
+    qDebug() << "Heartbeat interval:" << heartbeatIntervalSec << "s";
+    qDebug() << "Heartbeat timeout:" << heartbeatTimeoutSec << "s";
+    qDebug() << "Max tasks:" << maxConcurrentTasks;
+    qDebug() << "Task timeout:" << defaultTaskTimeoutSec << "s";
+    qDebug() << "──────────────────────";
 }

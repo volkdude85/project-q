@@ -1,59 +1,43 @@
-// ProjectQd — Persistent C++ farm mesh daemon
-// Usage: project-qd --coordinator [--port 9100]
-//        project-qd --worker --connect 192.168.0.145:9100 [--name porsche] [--caps gpu,x86_64]
-
 #include "config.h"
 #include "coordinator.h"
 #include "worker.h"
-#include <iostream>
-#include <cstdlib>
-#include <csignal>
+#include "queue_sync.h"
+#include <QCoreApplication>
+#include <QDebug>
+#include <QTimer>
 
-static Coordinator* g_coord = nullptr;
-static Worker* g_worker = nullptr;
+int main(int argc, char *argv[]) {
+    QCoreApplication app(argc, argv);
+    QCoreApplication::setApplicationName("project-qd");
+    QCoreApplication::setApplicationVersion("1.0.0");
 
-void handleSignal(int) {
-    std::cerr << "\n[QD] Shutting down...\n";
-    if (g_coord) g_coord->stop();
-    if (g_worker) g_worker->stop();
-}
-
-int main(int argc, char** argv) {
-    DaemonConfig cfg = DaemonConfig::fromArgs(argc, argv);
-    cfg.print();
-
-    // Ensure work and artifact dirs exist
-    system(("mkdir -p " + cfg.workDir).c_str());
-    system(("mkdir -p " + cfg.artifactDir).c_str());
-
-    // Signal handling
-    signal(SIGINT, handleSignal);
-    signal(SIGTERM, handleSignal);
+    DaemonConfig cfg = DaemonConfig::fromCommandLine(app);
+    cfg.dump();
 
     if (cfg.isCoordinator) {
-        Coordinator coord(cfg);
-        g_coord = &coord;
-        if (!coord.start()) {
-            std::cerr << "[QD] Coordinator start failed\n";
+        auto *coordinator = new Coordinator(cfg, &app);
+
+        if (!coordinator->start()) {
+            qCritical() << "[QD] Failed to start coordinator";
             return 1;
         }
-        std::cout << "[QD] Coordinator running on TCP :" << cfg.tcpPort
-                  << " UDP :" << cfg.udpPort << "\n";
-        coord.run();
-    } else {
-        // Try to connect with retries
-        for (int attempt = 1; attempt <= 5; attempt++) {
-            Worker worker(cfg);
-            g_worker = &worker;
-            if (worker.start()) {
-                worker.run();
-                break; // run returns when connection drops
-            }
-            std::cerr << "[QD] Connection attempt " << attempt << "/5 failed, retrying in 5s...\n";
-            sleep(5);
+
+        auto *queueSync = new QueueSync(cfg, coordinator, &app);
+        if (!queueSync->open()) {
+            qWarning() << "[QD] Queue database unavailable — running without persistence";
         }
-        std::cerr << "[QD] Worker exiting\n";
+
+        qDebug() << "[QD] Coordinator ready — waiting for workers on TCP" << cfg.tcpPort << "UDP" << cfg.udpPort;
+    } else {
+        auto *worker = new Worker(cfg, &app);
+
+        if (!worker->start()) {
+            qCritical() << "[QD] Failed to start worker";
+            return 1;
+        }
+
+        qDebug() << "[QD] Worker started — connecting to" << cfg.coordinatorHost << cfg.coordinatorPort;
     }
 
-    return 0;
+    return app.exec();
 }

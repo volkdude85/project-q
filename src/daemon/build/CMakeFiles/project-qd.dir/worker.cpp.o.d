@@ -185,6 +185,7 @@ CMakeFiles/project-qd.dir/worker.cpp.o: \
  /home/volkdude/Projects/project-q/src/daemon/config.h \
  /home/volkdude/Projects/project-q/src/daemon/taskrunner.h \
  /home/volkdude/Projects/project-q/src/daemon/queue_sync.h \
+ /home/volkdude/Projects/project-q/src/daemon/artifacts.h \
  /usr/include/c++/16.1.1/iostream /usr/include/c++/16.1.1/ostream \
  /usr/include/c++/16.1.1/bits/ostream_print.h \
  /usr/include/c++/16.1.1/bits/ostream.tcc /usr/include/c++/16.1.1/istream \
