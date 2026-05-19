@@ -6,5 +6,5 @@ CXX_DEFINES = -DQT_CORE_LIB -DQT_NETWORK_LIB -DQT_NO_DEBUG -DQT_SQL_LIB
 
 CXX_INCLUDES = -I/home/volkdude/Projects/project-q/build/project-qd_autogen/include -I/home/volkdude/Projects/project-q/src/daemon -isystem /usr/include/qt6/QtCore -isystem /usr/include/qt6 -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtNetwork -isystem /usr/include/qt6/QtSql
 
-CXX_FLAGS = -std=gnu++20 -fPIE -mno-direct-extern-access
+CXX_FLAGS = -O3 -DNDEBUG -std=gnu++20 -fPIE -mno-direct-extern-access
 

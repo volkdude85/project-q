@@ -104,6 +104,19 @@ void Coordinator::processCommand(QTcpSocket *socket, const QJsonObject &msg) {
         handleTaskResult(socket, msg);
     } else if (cmd == "ping") {
         handlePing(socket);
+    } else if (cmd == "submit") {
+        QString name = msg["name"].toString();
+        QString command = msg["command"].toString();
+        int timeout = msg.value("timeout_sec").toInt(1800);
+        if (name.isEmpty() || command.isEmpty()) {
+            socket->write(encodeFrame(buildError("submit requires 'name' and 'command'")));
+            return;
+        }
+        int id = addTask(name, command, timeout);
+        QJsonObject ack;
+        ack["cmd"] = "submit_ack";
+        ack["task_id"] = id;
+        socket->write(encodeFrame(ack));
     } else {
         qWarning() << "[COORD] Unknown command:" << cmd;
         QJsonObject err = buildError("Unknown command: " + cmd);
@@ -235,6 +248,22 @@ void Coordinator::checkHeartbeatTimeouts() {
     if (!timedOut.isEmpty()) {
         broadcastNodeList();
     }
+}
+
+// ─── Task Management ────────────────────────────────────────────────
+
+int Coordinator::addTask(const QString &name, const QString &command, int timeoutSec) {
+    int id = m_nextTaskId++;
+    TaskRecord t;
+    t.id = id;
+    t.name = name;
+    t.command = command;
+    t.timeoutSec = timeoutSec;
+    t.status = "pending";
+    m_taskQueue.append(t);
+    qDebug() << "[COORD] Queued task #" << id << ":" << name;
+    emit taskQueued(id);
+    return id;
 }
 
 // ─── Task Dispatch ────────────────────────────────────────────────────

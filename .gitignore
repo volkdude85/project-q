@@ -1,0 +1,15 @@
+build/
+cmake-build-*/
+*.o
+*.o.d
+moc_*
+.qmake.stash
+*.user
+*.pro.user*
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+standalone/

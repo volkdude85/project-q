@@ -41,6 +41,8 @@ public:
     bool start();
     void stop();
 
+    int addTask(const QString &name, const QString &command, int timeoutSec = 1800);
+
 signals:
     void nodeRegistered(const QString &name);
     void nodeDisconnected(const QString &name);

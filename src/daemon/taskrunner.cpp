@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFile>
 #include <QDebug>
+#include <QEventLoop>
 
 TaskRunner::TaskRunner(int taskId, const QString &name, const QString &command,
                        const QString &workDir, int timeoutSec, QObject *parent)
@@ -64,8 +65,14 @@ void TaskRunner::start() {
 
 void TaskRunner::kill() {
     if (m_process && m_process->state() != QProcess::NotRunning) {
-        qDebug() << "[TASK" << m_taskId << "] Killing...";
-        m_process->kill();
+        qDebug() << "[TASK" << m_taskId << "] Sending SIGTERM...";
+        m_process->terminate(); // SIGTERM
+
+        if (!m_process->waitForFinished(10000)) { // 10s grace
+            qDebug() << "[TASK" << m_taskId << "] Grace period expired, sending SIGKILL";
+            m_process->kill();
+            m_process->waitForFinished(3000);
+        }
     }
     m_status = "killed";
 }

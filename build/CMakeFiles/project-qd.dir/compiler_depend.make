@@ -49,7 +49,9 @@ CMakeFiles/project-qd.dir/config.cpp.o: /home/volkdude/Projects/project-q/src/da
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -569,7 +571,9 @@ CMakeFiles/project-qd.dir/coordinator.cpp.o: /home/volkdude/Projects/project-q/s
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1108,7 +1112,9 @@ CMakeFiles/project-qd.dir/main.cpp.o: /home/volkdude/Projects/project-q/src/daem
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -1652,7 +1658,9 @@ CMakeFiles/project-qd.dir/project-qd_autogen/mocs_compilation.cpp.o: project-qd_
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2189,7 +2197,9 @@ CMakeFiles/project-qd.dir/protocol.cpp.o: /home/volkdude/Projects/project-q/src/
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -2682,7 +2692,9 @@ CMakeFiles/project-qd.dir/queue_sync.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -3233,7 +3245,9 @@ CMakeFiles/project-qd.dir/taskrunner.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -3528,6 +3542,7 @@ CMakeFiles/project-qd.dir/taskrunner.cpp.o: /home/volkdude/Projects/project-q/sr
   /usr/include/qt6/QtCore/QDebug \
   /usr/include/qt6/QtCore/QDir \
   /usr/include/qt6/QtCore/QElapsedTimer \
+  /usr/include/qt6/QtCore/QEventLoop \
   /usr/include/qt6/QtCore/QFile \
   /usr/include/qt6/QtCore/QObject \
   /usr/include/qt6/QtCore/QProcess \
@@ -3743,7 +3758,9 @@ CMakeFiles/project-qd.dir/worker.cpp.o: /home/volkdude/Projects/project-q/src/da
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
+  /usr/include/bits/stdio.h \
   /usr/include/bits/stdio_lim.h \
+  /usr/include/bits/stdlib-bsearch.h \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
@@ -4465,6 +4482,8 @@ CMakeFiles/project-qd.dir/coordinator.cpp.o:
 
 /home/volkdude/Projects/project-q/src/daemon/worker.cpp:
 
+/usr/include/qt6/QtCore/QEventLoop:
+
 /home/volkdude/Projects/project-q/src/daemon/taskrunner.cpp:
 
 /usr/include/qt6/QtSql/qsqlquery.h:
@@ -4515,7 +4534,7 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 
 /usr/include/qt6/QtCore/qurl.h:
 
-/usr/include/c++/16.1.1/functional:
+/usr/include/qt6/QtCore/qtimer.h:
 
 /usr/include/c++/16.1.1/format:
 
@@ -4553,8 +4572,6 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 
 /usr/include/stdio.h:
 
-/usr/include/c++/16.1.1/clocale:
-
 /usr/include/c++/16.1.1/climits:
 
 /usr/include/bits/wordsize.h:
@@ -4570,12 +4587,6 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 /usr/include/qt6/QtSql/QSqlQuery:
 
 /usr/include/qt6/QtCore/qutf8stringview.h:
-
-/usr/include/c++/16.1.1/cassert:
-
-/usr/include/c++/16.1.1/bits/uses_allocator_args.h:
-
-/usr/include/asm-generic/errno-base.h:
 
 /usr/include/c++/16.1.1/bits/vector.tcc:
 
@@ -4721,15 +4732,13 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 
 /usr/include/c++/16.1.1/bits/fs_path.h:
 
-/usr/include/c++/16.1.1/bits/utility.h:
+/usr/include/c++/16.1.1/bits/stdexcept_except.h:
 
-/usr/include/qt6/QtCore/qprocessordetection.h:
+/usr/include/c++/16.1.1/bits/locale_facets_nonio.tcc:
 
-/usr/include/bits/types.h:
+/usr/include/c++/16.1.1/bits/fs_fwd.h:
 
-/usr/include/qt6/QtCore/qiodevice.h:
-
-/usr/include/qt6/QtCore/qtaggedpointer.h:
+/usr/include/c++/16.1.1/bits/fs_dir.h:
 
 /usr/include/c++/16.1.1/bits/stdexcept_throw.h:
 
@@ -4750,6 +4759,14 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 /usr/include/c++/16.1.1/bits/range_access.h:
 
 /usr/include/bits/types/__FILE.h:
+
+/usr/include/c++/16.1.1/clocale:
+
+/usr/include/bits/stdlib-bsearch.h:
+
+/usr/include/qt6/QtCore/qstandardpaths.h:
+
+/usr/include/qt6/QtCore/qjsondocument.h:
 
 /usr/include/bits/types/struct_timeval.h:
 
@@ -4795,11 +4812,15 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 
 /usr/include/c++/16.1.1/new:
 
-/usr/include/c++/16.1.1/bits/fs_dir.h:
-
 /usr/include/c++/16.1.1/bits/new_except.h:
 
 /usr/include/c++/16.1.1/bits/alloc_traits.h:
+
+/usr/include/c++/16.1.1/bits/uses_allocator_args.h:
+
+/usr/include/asm-generic/errno-base.h:
+
+/usr/include/c++/16.1.1/cassert:
 
 /usr/include/qt6/QtCore/QStringList:
 
@@ -4853,8 +4874,6 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 
 /usr/include/c++/16.1.1/bits/locale_facets.tcc:
 
-/usr/include/c++/16.1.1/initializer_list:
-
 /usr/lib/libc.so:
 
 /usr/include/asm-generic/types.h:
@@ -4882,10 +4901,6 @@ project-qd_autogen/EWIEGA46WW/moc_worker.cpp:
 /usr/include/qt6/QtCore/qdatetime.h:
 
 /usr/include/qt6/QtCore/qxptype_traits.h:
-
-/usr/include/c++/16.1.1/bits/locale_facets_nonio.tcc:
-
-/usr/include/c++/16.1.1/bits/fs_fwd.h:
 
 /usr/include/c++/16.1.1/ext/numeric_traits.h:
 
@@ -4991,6 +5006,10 @@ project-qd_autogen/EWIEGA46WW/moc_coordinator.cpp:
 
 /usr/include/bits/byteswap.h:
 
+/usr/include/qt6/QtCore/qbytearrayview.h:
+
+/usr/include/c++/16.1.1/bits/istream.tcc:
+
 /usr/include/bits/struct_mutex.h:
 
 /usr/include/qt6/QtCore/QHash:
@@ -5045,18 +5064,6 @@ project-qd_autogen/EWIEGA46WW/moc_coordinator.cpp:
 
 /usr/include/bits/floatn-common.h:
 
-/usr/include/bits/types/FILE.h:
-
-/usr/include/linux/posix_types.h:
-
-/usr/include/qt6/QtCore/q23utility.h:
-
-/usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/messages_members.h:
-
-/usr/include/qt6/QtCore/QObject:
-
-/usr/include/bits/flt-eval-method.h:
-
 /usr/lib32/libicudata.so.78:
 
 /usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/cpu_defines.h:
@@ -5070,6 +5077,28 @@ project-qd_autogen/EWIEGA46WW/moc_coordinator.cpp:
 /usr/include/c++/16.1.1/bits/basic_string.tcc:
 
 /usr/include/qt6/QtCore/qmath.h:
+
+/usr/include/c++/16.1.1/bits/utility.h:
+
+/usr/include/qt6/QtCore/qprocessordetection.h:
+
+/usr/include/bits/types.h:
+
+/usr/include/qt6/QtCore/qiodevice.h:
+
+/usr/include/qt6/QtCore/qtaggedpointer.h:
+
+/usr/include/bits/flt-eval-method.h:
+
+/usr/include/bits/types/FILE.h:
+
+/usr/include/linux/posix_types.h:
+
+/usr/include/qt6/QtCore/q23utility.h:
+
+/usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/messages_members.h:
+
+/usr/include/qt6/QtCore/QObject:
 
 /usr/include/qt6/QtNetwork/qtcpserver.h:
 
@@ -5115,9 +5144,9 @@ project-qd_autogen/EWIEGA46WW/moc_coordinator.cpp:
 
 /usr/include/c++/16.1.1/bits/ostream.tcc:
 
-/usr/include/qt6/QtCore/qconfig.h:
-
 /usr/include/bits/sched.h:
+
+/usr/include/qt6/QtCore/qconfig.h:
 
 /usr/include/qt6/QtCore/qshareddata_impl.h:
 
@@ -5233,8 +5262,6 @@ project-qd_autogen/EWIEGA46WW/moc_coordinator.cpp:
 
 /usr/include/c++/16.1.1/bits/basic_string.h:
 
-/usr/include/qt6/QtCore/qtimer.h:
-
 /usr/include/c++/16.1.1/bits/binders.h:
 
 /usr/include/c++/16.1.1/bits/exception_defines.h:
@@ -5259,7 +5286,9 @@ project-qd_autogen/EWIEGA46WW/moc_coordinator.cpp:
 
 /usr/include/qt6/QtCore/qgenericatomic.h:
 
-/usr/include/c++/16.1.1/bits/stdexcept_except.h:
+/usr/include/c++/16.1.1/functional:
+
+/usr/include/c++/16.1.1/initializer_list:
 
 /usr/include/c++/16.1.1/istream:
 
@@ -5485,14 +5514,6 @@ CMakeFiles/project-qd.dir/taskrunner.cpp.o:
 
 /usr/include/qt6/QtCore/qbytearraylist.h:
 
-/usr/include/c++/16.1.1/bits/istream.tcc:
-
-/usr/include/qt6/QtCore/qbytearrayview.h:
-
-/usr/include/qt6/QtCore/qstandardpaths.h:
-
-/usr/include/qt6/QtCore/qjsondocument.h:
-
 /usr/include/qt6/QtCore/qchar.h:
 
 /usr/include/qt6/QtCore/qcommandlineoption.h:
@@ -5569,11 +5590,11 @@ project-qd_autogen/EWIEGA46WW/moc_queue_sync.cpp:
 
 /usr/include/qt6/QtCore/qspan.h:
 
+/usr/include/qt6/QtCore/qregularexpression.h:
+
 /usr/include/c++/16.1.1/array:
 
 /usr/include/c++/16.1.1/bits/stl_bvector.h:
-
-/usr/include/qt6/QtCore/qregularexpression.h:
 
 /usr/include/qt6/QtCore/qstringconverter.h:
 
@@ -5674,6 +5695,8 @@ project-qd_autogen/EWIEGA46WW/moc_queue_sync.cpp:
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h:
 
 /usr/include/c++/16.1.1/ext/aligned_buffer.h:
+
+/usr/include/bits/stdio.h:
 
 /home/volkdude/Projects/project-q/src/daemon/coordinator.cpp:
 

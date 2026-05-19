@@ -71,7 +71,7 @@ CMakeFiles/project-qd_autogen: project-qd_autogen/timestamp
 project-qd_autogen/timestamp: /usr/lib/qt6/moc
 project-qd_autogen/timestamp: CMakeFiles/project-qd_autogen.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/volkdude/Projects/project-q/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC and UIC for target project-qd"
-	/usr/bin/cmake -E cmake_autogen /home/volkdude/Projects/project-q/build/CMakeFiles/project-qd_autogen.dir/AutogenInfo.json ""
+	/usr/bin/cmake -E cmake_autogen /home/volkdude/Projects/project-q/build/CMakeFiles/project-qd_autogen.dir/AutogenInfo.json Release
 	/usr/bin/cmake -E touch /home/volkdude/Projects/project-q/build/project-qd_autogen/timestamp
 
 CMakeFiles/project-qd_autogen.dir/codegen:
