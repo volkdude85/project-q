@@ -107,16 +107,62 @@ void Coordinator::processCommand(QTcpSocket *socket, const QJsonObject &msg) {
     } else if (cmd == "submit") {
         QString name = msg["name"].toString();
         QString command = msg["command"].toString();
+        QString targetNode = msg.value("target_node").toString();
         int timeout = msg.value("timeout_sec").toInt(1800);
         if (name.isEmpty() || command.isEmpty()) {
             socket->write(encodeFrame(buildError("submit requires 'name' and 'command'")));
             return;
         }
-        int id = addTask(name, command, timeout);
+        int id = addTask(name, command, timeout, targetNode);
         QJsonObject ack;
         ack["cmd"] = "submit_ack";
         ack["task_id"] = id;
         socket->write(encodeFrame(ack));
+    } else if (cmd == "heartbeat") {
+        // TCP heartbeat fallback — updates node liveness when UDP is blocked
+        QString nodeName = m_socketToNode.value(socket);
+        if (!nodeName.isEmpty() && m_nodes.contains(nodeName)) {
+            m_nodes[nodeName].lastHeartbeatMs = QDateTime::currentMSecsSinceEpoch();
+            m_nodes[nodeName].lastLoad = msg.value("load").toVariant().toUInt();
+            // After the first TCP heartbeat, mark fully registered
+            m_nodes[nodeName].fullyRegistered = true;
+            QJsonObject ack;
+            ack["cmd"] = "heartbeat_ack";
+            ack["load"] = msg["load"];
+            socket->write(encodeFrame(ack));
+        } else if (m_socketToNode.contains(socket)) {
+            // Socket is mapped but node hasn't been added yet — race window
+            // This shouldn't happen, but log it
+            qDebug() << "[COORD] Heartbeat from mapped but unregistered socket";
+        } else {
+            // Heartbeat arrived before register command — store as pending
+            NodeInfo pending;
+            pending.lastHeartbeatMs = QDateTime::currentMSecsSinceEpoch();
+            pending.lastLoad = msg.value("load").toVariant().toUInt();
+            pending.fullyRegistered = true;
+            m_pendingRegistrations[socket] = pending;
+            qDebug() << "[COORD] Stored pending heartbeat for unregistered worker at"
+                     << socket->peerAddress().toString();
+        }
+    } else if (cmd == "list_nodes") {
+        // Dump all registered nodes
+        QJsonObject result;
+        result["cmd"] = "node_list_response";
+        QJsonArray nodesArr;
+        for (auto it = m_nodes.begin(); it != m_nodes.end(); ++it) {
+            QJsonObject n;
+            n["name"] = it->name;
+            n["load"] = static_cast<double>(it->lastLoad);
+            n["active_tasks"] = it->activeTasks;
+            n["last_heartbeat_sec_ago"] = (QDateTime::currentMSecsSinceEpoch() - it->lastHeartbeatMs) / 1000;
+            n["address"] = it->address.toString();
+            n["registered_sec_ago"] = (QDateTime::currentMSecsSinceEpoch() - it->registeredAtMs) / 1000;
+            n["fully_registered"] = it->fullyRegistered || it->registeredAtMs > 0;
+            nodesArr.append(n);
+        }
+        result["nodes"] = nodesArr;
+        result["count"] = nodesArr.size();
+        socket->write(encodeFrame(result));
     } else if (cmd == "task_query") {
         int taskId = msg["task_id"].toInt();
         QJsonObject result;
@@ -162,6 +208,8 @@ void Coordinator::handleRegister(QTcpSocket *socket, const QJsonObject &msg) {
     info.address = socket->peerAddress();
     info.tcpPort = m_config.tcpPort;
     info.lastHeartbeatMs = QDateTime::currentMSecsSinceEpoch();
+    info.registeredAtMs = QDateTime::currentMSecsSinceEpoch();
+    info.fullyRegistered = false;  // grace period starts now
     info.activeTasks = 0;
 
     // If node re-registers, close old socket
@@ -180,6 +228,16 @@ void Coordinator::handleRegister(QTcpSocket *socket, const QJsonObject &msg) {
 
     m_nodes[name] = info;
     m_socketToNode[socket] = name;
+
+    // Apply any pending heartbeats that arrived before registration completed
+    if (m_pendingRegistrations.contains(socket)) {
+        NodeInfo &pending = m_pendingRegistrations[socket];
+        m_nodes[name].lastHeartbeatMs = pending.lastHeartbeatMs;
+        m_nodes[name].lastLoad = pending.lastLoad;
+        m_nodes[name].fullyRegistered = true;
+        m_pendingRegistrations.remove(socket);
+        qDebug() << "[COORD] Applied pre-registration heartbeat for" << name;
+    }
 
     // Send registration acknowledgment
     QJsonObject ack = buildRegisterAck(name, "1.0.0");
@@ -259,6 +317,17 @@ void Coordinator::checkHeartbeatTimeouts() {
 
     QStringList timedOut;
     for (auto it = m_nodes.begin(); it != m_nodes.end(); ++it) {
+        // Grace period: newly registered nodes get a window before timeouts apply
+        qint64 ageMs = now - it->registeredAtMs;
+        if (ageMs < REGISTRATION_GRACE_MS) {
+            // Still in grace window — skip timeout check but log progress
+            if (!it->fullyRegistered && (ageMs % 10000) < 5000) {
+                qDebug() << "[COORD] Grace period for" << it->name << ageMs/1000 << "s elapsed, waiting for first heartbeat";
+            }
+            continue;
+        }
+
+        // After grace period — normal timeout check
         if (now - it->lastHeartbeatMs > timeoutMs) {
             timedOut.append(it.key());
         }
@@ -277,16 +346,17 @@ void Coordinator::checkHeartbeatTimeouts() {
 
 // ─── Task Management ────────────────────────────────────────────────
 
-int Coordinator::addTask(const QString &name, const QString &command, int timeoutSec) {
+int Coordinator::addTask(const QString &name, const QString &command, int timeoutSec, const QString &targetNode) {
     int id = m_nextTaskId++;
     TaskRecord t;
     t.id = id;
     t.name = name;
     t.command = command;
     t.timeoutSec = timeoutSec;
+    t.targetNode = targetNode;
     t.status = "pending";
     m_taskQueue.append(t);
-    qDebug() << "[COORD] Queued task #" << id << ":" << name;
+    qDebug() << "[COORD] Queued task #" << id << ":" << name << (targetNode.isEmpty() ? "" : "→"+targetNode);
     emit taskQueued(id);
     return id;
 }
@@ -306,24 +376,53 @@ void Coordinator::dispatchNextTask() {
     if (pendingIdx < 0) return;
     TaskRecord &task = m_taskQueue[pendingIdx];
 
-    // Find a node with capacity
-    for (auto it = m_nodes.begin(); it != m_nodes.end(); ++it) {
+    int nodeCount = m_nodes.size();
+    if (nodeCount == 0) return;
+
+    // Collect node names in order
+    QStringList nodeNames;
+    for (auto it = m_nodes.begin(); it != m_nodes.end(); ++it)
+        nodeNames.append(it.key());
+    nodeNames.sort();
+
+    // If task has a target node, try it first
+    if (!task.targetNode.isEmpty()) {
+        auto it = m_nodes.find(task.targetNode);
+        if (it != m_nodes.end() && it->activeTasks < m_config.maxConcurrentTasks) {
+            assignTask(task, task.targetNode);
+            return;
+        }
+        // Target node doesn't exist or is full — fall through to round-robin
+    }
+
+    // Round-robin dispatch
+    for (int i = 0; i < nodeCount; ++i) {
+        int idx = (m_dispatchCursor + i) % nodeCount;
+        QString nodeName = nodeNames[idx];
+        auto it = m_nodes.find(nodeName);
+        if (it == m_nodes.end()) continue;
+
         if (it->activeTasks < m_config.maxConcurrentTasks) {
-            QString nodeName = it.key();
-            task.status = "running";
-            task.assignedNode = nodeName;
-            task.startedMs = QDateTime::currentMSecsSinceEpoch();
-            it->activeTasks++;
-
-            QJsonObject assign = buildTaskAssign(task.id, task.name, task.command, task.timeoutSec);
-            sendToWorker(nodeName, assign);
-
-            qDebug() << "[COORD] Dispatched task #" << task.id << "(" << task.name << ") to" << nodeName;
-            emit taskStarted(task.id, nodeName);
-            broadcastNodeList();
-            break;
+            assignTask(task, nodeName);
+            m_dispatchCursor = (idx + 1) % nodeCount;
+            return;
         }
     }
+    // All nodes full — task stays pending
+}
+
+void Coordinator::assignTask(TaskRecord &task, const QString &nodeName) {
+    task.status = "running";
+    task.assignedNode = nodeName;
+    task.startedMs = QDateTime::currentMSecsSinceEpoch();
+    m_nodes[nodeName].activeTasks++;
+
+    QJsonObject assign = buildTaskAssign(task.id, task.name, task.command, task.timeoutSec);
+    sendToWorker(nodeName, assign);
+
+    qDebug() << "[COORD] Dispatched task #" << task.id << "(" << task.name << ") to" << nodeName;
+    emit taskStarted(task.id, nodeName);
+    broadcastNodeList();
 }
 
 void Coordinator::sendToWorker(const QString &nodeName, const QJsonObject &msg) {
@@ -343,6 +442,7 @@ void Coordinator::broadcastNodeList() {
         n["name"] = it->name;
         n["load"] = static_cast<double>(it->lastLoad);
         n["active_tasks"] = it->activeTasks;
+        n["fully_registered"] = it->fullyRegistered;
         n["capabilities"] = QJsonArray::fromStringList(it->capabilities);
         nodesJson.append(n);
     }

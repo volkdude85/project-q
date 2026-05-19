@@ -147,11 +147,20 @@ void Worker::sendHeartbeat() {
         }
     }
 
+    // UDP heartbeat (primary — may fail if UDP is blocked)
     HeartbeatPacket pkt = makeHeartbeat(m_config.nodeName, load);
     m_udpSocket->writeDatagram(
         reinterpret_cast<const char*>(&pkt), sizeof(pkt),
         QHostAddress(m_config.coordinatorHost), m_config.udpPort
     );
+
+    // TCP heartbeat fallback — always works if TCP is connected
+    if (m_tcpSocket->state() == QAbstractSocket::ConnectedState) {
+        QJsonObject hb;
+        hb["cmd"] = "heartbeat";
+        hb["load"] = static_cast<double>(load);
+        m_tcpSocket->write(encodeFrame(hb));
+    }
 }
 
 void Worker::reconnect() {
