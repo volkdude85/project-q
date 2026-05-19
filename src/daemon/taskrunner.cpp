@@ -95,22 +95,24 @@ void TaskRunner::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus
     QString stdoutPath = m_outputDir + "/stdout.log";
     QString stderrPath = m_outputDir + "/stderr.log";
 
+    QString stdoutContent;
     QFile stdoutFile(stdoutPath);
     if (stdoutFile.open(QIODevice::ReadOnly)) {
         outputs.append(stdoutPath);
+        stdoutContent = QString::fromUtf8(stdoutFile.readAll());
         stdoutFile.close();
     }
 
     QString errorLog;
     QFile stderrFile(stderrPath);
     if (stderrFile.open(QIODevice::ReadOnly)) {
-        errorLog = QString::fromUtf8(stderrFile.readAll().left(4096)); // cap at 4KB
+        errorLog = QString::fromUtf8(stderrFile.readAll().left(4096));
         stderrFile.close();
     }
 
     qDebug() << "[TASK" << m_taskId << "] Finished:" << m_status << "(" << durationSec << "s, exit:" << exitCode << ")";
 
-    emit completed(m_status, durationSec, outputs, errorLog);
+    emit completed(m_status, durationSec, outputs, errorLog, stdoutContent);
 }
 
 void TaskRunner::onTimeout() {

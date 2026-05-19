@@ -117,6 +117,27 @@ void Coordinator::processCommand(QTcpSocket *socket, const QJsonObject &msg) {
         ack["cmd"] = "submit_ack";
         ack["task_id"] = id;
         socket->write(encodeFrame(ack));
+    } else if (cmd == "task_query") {
+        int taskId = msg["task_id"].toInt();
+        QJsonObject result;
+        result["cmd"] = "task_query_result";
+        result["task_id"] = taskId;
+        result["found"] = false;
+        for (const auto &t : m_taskQueue) {
+            if (t.id == taskId) {
+                result["found"] = true;
+                result["status"] = t.status;
+                result["name"] = t.name;
+                result["assigned_node"] = t.assignedNode;
+                result["duration_sec"] = t.durationSec;
+                if (!t.stdoutContent.isEmpty())
+                    result["stdout"] = t.stdoutContent;
+                if (!t.errorLog.isEmpty())
+                    result["error_log"] = t.errorLog;
+                break;
+            }
+        }
+        socket->write(encodeFrame(result));
     } else {
         qWarning() << "[COORD] Unknown command:" << cmd;
         QJsonObject err = buildError("Unknown command: " + cmd);
@@ -172,6 +193,8 @@ void Coordinator::handleTaskResult(QTcpSocket *socket, const QJsonObject &msg) {
     int taskId = msg["task_id"].toInt();
     QString status = msg["status"].toString();
     int durationSec = msg["duration_sec"].toInt();
+    QString stdoutContent = msg.value("stdout").toString();
+    QString errorLog = msg.value("error_log").toString();
 
     QString nodeName = m_socketToNode.value(socket);
 
@@ -182,6 +205,8 @@ void Coordinator::handleTaskResult(QTcpSocket *socket, const QJsonObject &msg) {
         if (task.id == taskId) {
             task.status = status;
             task.durationSec = durationSec;
+            task.stdoutContent = stdoutContent;
+            task.errorLog = errorLog;
             break;
         }
     }

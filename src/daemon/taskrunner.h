@@ -26,7 +26,8 @@ public:
 
 signals:
     void completed(const QString &status, int durationSec,
-                   const QStringList &outputs, const QString &errorLog);
+                   const QStringList &outputs, const QString &errorLog,
+                   const QString &stdoutContent);
 
 private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);

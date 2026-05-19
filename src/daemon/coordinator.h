@@ -30,6 +30,8 @@ struct TaskRecord {
     int durationSec = 0;
     qint64 startedMs = 0;
     int timeoutSec = 1800;
+    QString stdoutContent;  // captured from worker result
+    QString errorLog;
 };
 
 class Coordinator : public QObject {

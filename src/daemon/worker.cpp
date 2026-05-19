@@ -106,8 +106,10 @@ void Worker::handleTaskAssign(const QJsonObject &msg) {
 
     auto *runner = new TaskRunner(taskId, name, command, m_config.workDir, timeoutSec, this);
 
-    connect(runner, &TaskRunner::completed, this, [this, taskId, runner](const QString &status, int duration, const QStringList &outputs, const QString &errorLog) {
+    connect(runner, &TaskRunner::completed, this, [this, taskId, runner](const QString &status, int duration, const QStringList &outputs, const QString &errorLog, const QString &stdoutContent) {
         QJsonObject result = buildTaskResult(taskId, status, outputs, duration, errorLog);
+        if (!stdoutContent.isEmpty())
+            result["stdout"] = stdoutContent;
         m_tcpSocket->write(encodeFrame(result));
         m_runningTasks.remove(taskId);
         emit taskCompleted(taskId, status);
